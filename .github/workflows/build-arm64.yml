@@ -60,7 +60,7 @@ jobs:
           if [ -z "$apksigner" ]; then echo 'Missing apksigner' >&2; exit 1; fi
           output=$("$apksigner" verify --print-certs "$apk")
           printf '%s\n' "$output"
-          actual=$(printf '%s\n' "$output" | awk '/Signer #1 certificate SHA-256 digest:/ { print $NF }' | tr '[:upper:]' '[:lower:]')
+          actual=$(printf '%s\n' "$output" | awk '/(Signer #1 certificate SHA-256 digest:|certificate SHA-256 digest:)/ { print $NF }' | tail -n1 | tr '[:upper:]' '[:lower:]')
           if [ "$actual" != "$expected" ]; then
             echo "Certificate mismatch: expected $expected, got ${actual:-none}" >&2
             exit 1
