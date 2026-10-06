@@ -16,8 +16,8 @@ void main() {
     SharedPreferences.setMockInitialValues({'source': 'huangdou'});
     final store = testStore(await SharedPreferences.getInstance());
     expect(appSlug, allSourcesEnabled ? 'zhenguojian' : 'hongguojian');
-    // 默认只显示红果、韩小圈、鬼片网与青空次元，其余站源需要密码解锁。
-    expect(store.sources.length, allSourcesEnabled ? 4 : 1);
+    // 多源版本默认显示全部内置站源；单源版仅包含红果。
+    expect(store.sources.length, allSourcesEnabled ? 11 : 1);
     expect(
       SourceSite.values.any((source) => source.id == 'dsd'),
       allSourcesEnabled,
@@ -25,12 +25,8 @@ void main() {
     expect(SourceSite.isAvailable('dsd'), allSourcesEnabled);
     expect(SourceSite.isKnown('dsd'), isTrue);
     expect(SourceSite.byId('dsd').name, '帝果');
-    expect(store.allowsSource('dsd'), isFalse);
-    expect(store.source, 'hongguo');
-    await store.enableSourceGate('666666');
-    expect(store.sourcesUnlocked, isTrue);
-    expect(store.sources.length, allSourcesEnabled ? 11 : 1);
     expect(store.allowsSource('dsd'), allSourcesEnabled);
+    expect(store.source, 'hongguo');
     store.dispose();
   });
 
@@ -58,7 +54,6 @@ void main() {
         'profile.viewer.source': 'huangdou',
       });
       final store = testStore(await SharedPreferences.getInstance());
-      await unlockGate(store);
       expect(store.profile.id, 'viewer');
       expect(store.profile.admin, isFalse);
       expect(store.profile.sources, ['huangdou']);
@@ -92,7 +87,6 @@ void main() {
       'profile.viewer.source': 'dsd',
     });
     final store = testStore(await SharedPreferences.getInstance());
-    await unlockGate(store);
     expect(store.configurationError, isNull);
     expect(store.profile.sources, ['dsd']);
     expect(

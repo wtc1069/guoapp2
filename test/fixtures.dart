@@ -28,9 +28,6 @@ Future<Map<String, Object>> gatePreferences() async => {
   'sourceGateHash': await testPinHasher(gatePin, gateSalt),
 };
 
-/// 解锁默认隐藏的站源，供需要访问全部站源的用例复用。
-Future<void> unlockGate(LocalStore store) => store.unlockSources(gatePin);
-
 class FixtureRepository extends AppRepository {
   int detailCalls = 0;
   bool fail = false;
