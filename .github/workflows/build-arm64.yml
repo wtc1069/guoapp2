@@ -53,13 +53,18 @@ jobs:
         run: |
           set -euo pipefail
           apk=$(find dist/android -maxdepth 1 -name '*arm64-v8a.apk' -print -quit)
-          test -n "$apk"
+          if [ -z "$apk" ]; then echo 'Missing arm64 APK' >&2; exit 1; fi
           expected=$(printf '%s' "$ANDROID_CERT_SHA256" | tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]')
-          test -n "$expected"
+          if [ -z "$expected" ]; then echo 'Missing certificate fingerprint' >&2; exit 1; fi
           apksigner=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n1)
-          test -n "$apksigner"
-          actual=$("$apksigner" verify --print-certs "$apk" | awk '/Signer #1 certificate SHA-256 digest:/ { print $NF }')
-          test "$actual" = "$expected"
+          if [ -z "$apksigner" ]; then echo 'Missing apksigner' >&2; exit 1; fi
+          output=$("$apksigner" verify --print-certs "$apk")
+          printf '%s\n' "$output"
+          actual=$(printf '%s\n' "$output" | awk '/Signer #1 certificate SHA-256 digest:/ { print $NF }' | tr '[:upper:]' '[:lower:]')
+          if [ "$actual" != "$expected" ]; then
+            echo "Certificate mismatch: expected $expected, got ${actual:-none}" >&2
+            exit 1
+          fi
           python - "$apk" <<'PY'
           import sys
           import zipfile
