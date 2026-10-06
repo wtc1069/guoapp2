@@ -44,6 +44,7 @@ class LocalStore extends ChangeNotifier {
   String? _configurationError;
   int _epoch = 0;
   int _failures = 0;
+  DateTime _retryAfter = DateTime(2000);
 
   void _initialize() {
     try {
@@ -1087,7 +1088,6 @@ class LocalStore extends ChangeNotifier {
     _current = profiles.firstWhere((profile) => profile.admin).id;
     _configurationError = null;
     _locked = forceLogin && profile.protected;
-    _loadSourceGate();
     _loadLibrary();
     _loadSeriesCandidates();
     _epoch++;
