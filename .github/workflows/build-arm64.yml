@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -47,9 +47,44 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: python scripts/build_android.py --all-sources --abi arm64-v8a
+      - name: Verify APK signature and ABI
+        env:
+          ANDROID_CERT_SHA256: ${{ vars.ANDROID_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          apk=$(find dist/android -maxdepth 1 -name '*arm64-v8a.apk' -print -quit)
+          test -n "$apk"
+          expected=$(printf '%s' "$ANDROID_CERT_SHA256" | tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]')
+          test -n "$expected"
+          apksigner=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n1)
+          test -n "$apksigner"
+          actual=$("$apksigner" verify --print-certs "$apk" | awk '/Signer #1 certificate SHA-256 digest:/ { print $NF }')
+          test "$actual" = "$expected"
+          python - "$apk" <<'PY'
+          import sys
+          import zipfile
+
+          with zipfile.ZipFile(sys.argv[1]) as apk:
+              abis = {name.split('/')[1] for name in apk.namelist() if name.startswith('lib/') and name.count('/') >= 2}
+          if abis != {'arm64-v8a'}:
+              raise SystemExit(f'Unexpected APK ABIs: {sorted(abis)}')
+          print('Verified arm64-v8a APK and release certificate')
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: zhenguojian-arm64-v8a
           path: dist/android/*arm64-v8a.apk
           if-no-files-found: error
           retention-days: 14
+      - name: Publish arm64-v8a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANDROID_CERT_SHA256: ${{ vars.ANDROID_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml | head -n1)
+          tag="arm64-v${version//+/-}"
+          gh release create "$tag" dist/android/*arm64-v8a.apk \
+            --target "$GITHUB_SHA" \
+            --title "真果鉴 arm64-v8a $version" \
+            --notes "全部站源，Android arm64-v8a。签名证书 SHA-256：${ANDROID_CERT_SHA256}"
