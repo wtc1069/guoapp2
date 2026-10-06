@@ -90,6 +90,9 @@ func splitProviderDramaID(id string) (source, sourceID string, ok bool) {
 }
 
 func isHuangguoProviderSource(source string) bool {
+	if isDuanjuProviderSource(source) {
+		return true
+	}
 	switch canonicalProviderSource(source) {
 	case sourceHuangguoAI, sourceHuangguoVideo, sourceHuangdou, sourceHongguo, sourceHuangju, sourceYeguo, sourceDSD, sourceCloudFront, sourceSorani, sourceGuipian, sourceHanxiaoquan:
 		return true
@@ -99,6 +102,9 @@ func isHuangguoProviderSource(source string) bool {
 }
 
 func canonicalProviderSource(source string) string {
+	if canonical := canonicalDuanjuSource(source); canonical != "" {
+		return canonical
+	}
 	switch strings.ToLower(strings.TrimSpace(source)) {
 	case "huangguo", "huangguoai", "huangguoai.com":
 		return sourceHuangguoAI
