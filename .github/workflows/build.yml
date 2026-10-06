@@ -76,7 +76,7 @@ jobs:
             echo "手动发布只能从 main 分支执行，当前为 $GITHUB_REF。" >&2
             exit 1
           fi
-          if gh release view "$tag" >/dev/null 2>&1 || { [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; }; then
+          if gh release view "$tag" >/dev/null 2>&1; then
             echo "版本 $version（$tag）已发布过，请先提升 pubspec.yaml 的 version。" >&2
             exit 1
           fi
