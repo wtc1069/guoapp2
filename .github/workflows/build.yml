@@ -1,6 +1,8 @@
 name: Build app packages
 
 on:
+  push:
+    tags: ['app-v*']
   workflow_dispatch:
 
 permissions:
@@ -60,16 +62,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
-            echo "只能从 main 分支手动发布，当前为 $GITHUB_REF。" >&2
-            exit 1
-          fi
           version=$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml | head -n1)
           if [ -z "$version" ]; then
             echo "pubspec.yaml 缺少 version。" >&2
             exit 1
           fi
           tag="app-v${version//+/-}"
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" != "refs/tags/$tag" ]; then
+            echo "推送标签 $GITHUB_REF 与 pubspec.yaml 版本标签 $tag 不一致。" >&2
+            exit 1
+          fi
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "手动发布只能从 main 分支执行，当前为 $GITHUB_REF。" >&2
+            exit 1
+          fi
           if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null || gh release view "$tag" >/dev/null 2>&1; then
             echo "版本 $version（$tag）已发布过，请先提升 pubspec.yaml 的 version。" >&2
             exit 1
